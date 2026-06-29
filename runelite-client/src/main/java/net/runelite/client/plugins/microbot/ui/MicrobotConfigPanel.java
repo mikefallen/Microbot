@@ -45,6 +45,8 @@ import net.runelite.client.plugins.microbot.breakhandler.breakhandlerv2.PluginSt
 import net.runelite.client.plugins.microbot.inventorysetups.InventorySetup;
 import net.runelite.client.plugins.microbot.inventorysetups.MInventorySetupsPlugin;
 import net.runelite.client.plugins.microbot.mouserecorder.MouseMacroRecorderPlugin;
+import net.runelite.client.plugins.microbot.MicrobotConfig;
+import net.runelite.client.plugins.microbot.util.mouse.mousev2.calibration.MouseProfileTunerFrame;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.DynamicGridLayout;
 import net.runelite.client.ui.FontManager;
@@ -832,6 +834,10 @@ class MicrobotConfigPanel extends MicrobotPluginPanel {
             if (MouseMacroRecorderPlugin.CONFIG_GROUP.equals(cd.getGroup().value())
                     && "openRecordingsFolder".equals(cid.getItem().keyName())) {
                 MouseMacroRecorderPlugin.openRecordingsFolderStatic();
+            }
+            if (MicrobotConfig.configGroup.equals(cd.getGroup().value())
+                    && MicrobotConfig.keyOpenMouseProfileTuner.equals(cid.getItem().keyName())) {
+                MouseProfileTunerFrame.openStatic();
             }
         });
         return button;

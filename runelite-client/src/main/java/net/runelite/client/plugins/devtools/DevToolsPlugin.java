@@ -186,6 +186,8 @@ public class DevToolsPlugin extends Plugin
 	private MicrobotClickOverlay microbotClickOverlay;
 	@Inject
 	private MicrobotMouseOverlay microbotMouseOverlay;
+	@Inject
+	private MouseV2DebugOverlay mouseV2DebugOverlay;
 	private DevToolsButton players;
 	private DevToolsButton npcs;
 	private DevToolsButton groundItems;
@@ -220,6 +222,7 @@ public class DevToolsPlugin extends Plugin
 	private DevToolsButton uiDefaultsInspector;
 	private DevToolsButton mouseClick;
 	private DevToolsButton mouseMovement;
+	private DevToolsButton mouseV2Debug;
 	private DevToolsButton worldEntities;
 	private NavigationButton navButton;
 
@@ -280,6 +283,7 @@ public class DevToolsPlugin extends Plugin
 		mouseClick = new DevToolsButton("Bot Clicks");
 		mouseMovement = new DevToolsButton("Bot Mouse");
 		mouseMovement.setActive(true);
+		mouseV2Debug = new DevToolsButton("MouseV2 Debug");
 
 		worldEntities = new DevToolsButton("World Entities");
 
@@ -292,6 +296,7 @@ public class DevToolsPlugin extends Plugin
 		overlayManager.add(soundEffectOverlay);
 		overlayManager.add(microbotClickOverlay);
 		overlayManager.add(microbotMouseOverlay);
+		overlayManager.add(mouseV2DebugOverlay);
 
 		final DevToolsPanel panel = injector.getInstance(DevToolsPanel.class);
 
@@ -324,6 +329,7 @@ public class DevToolsPlugin extends Plugin
 		overlayManager.remove(soundEffectOverlay);
 		overlayManager.remove(microbotClickOverlay);
 		overlayManager.remove(microbotMouseOverlay);
+		overlayManager.remove(mouseV2DebugOverlay);
 		clientToolbar.removeNavigation(navButton);
 		Toolkit.getDefaultToolkit().removeAWTEventListener(swingInspectorKeyListener);
 	}

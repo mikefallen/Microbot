@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "sampleCount": 0,
+  "contributors": 0,
+  "parameters": {
+    "baseTimeMs":        { "distribution": "uniform", "params": { "min": 100.0, "max": 200.0 }, "clampLo": 100.0, "clampHi": 200.0 },
+    "logScaleMs":        { "distribution": "uniform", "params": { "min": 80.0,  "max": 140.0 }, "clampLo": 80.0,  "clampHi": 140.0 },
+    "curveScale":        { "distribution": "uniform", "params": { "min": 0.5,   "max": 2.0   }, "clampLo": 0.3,   "clampHi": 2.5   },
+    "curveBias":         { "distribution": "uniform", "params": { "min": -1.0,  "max": 1.0   }, "clampLo": -1.0,  "clampHi": 1.0   },
+    "dirBias":           { "distribution": "uniform", "params": { "min": -1.0,  "max": 1.0   }, "clampLo": -1.0,  "clampHi": 1.0   },
+    "powerLawBaseSpeed": { "distribution": "uniform", "params": { "min": 50.0,  "max": 200.0 }, "clampLo": 20.0,  "clampHi": 200.0 },
+    "velocityPeak":      { "distribution": "uniform", "params": { "min": 0.3,   "max": 0.5   }, "clampLo": 0.25,  "clampHi": 0.55  },
+    "overshootOffsetAmp":{ "distribution": "uniform", "params": { "min": 0.5,   "max": 3.0   }, "clampLo": 0.2,   "clampHi": 6.0   },
+    "overshootTendency": { "distribution": "uniform", "params": { "min": 0.0,   "max": 0.3   }, "clampLo": 0.0,   "clampHi": 0.4   },
+    "extensionFrac":     { "distribution": "uniform", "params": { "min": 0.05,  "max": 0.2   }, "clampLo": 0.02,  "clampHi": 0.3   },
+    "hookTendency":      { "distribution": "uniform", "params": { "min": 0.0,   "max": 0.8   }, "clampLo": 0.0,   "clampHi": 1.0   },
+    "motorNoiseBandwidth":{ "distribution": "uniform", "params": { "min": 0.2,  "max": 0.9   }, "clampLo": 0.1,   "clampHi": 1.0   },
+    "subMovementScale":  { "distribution": "uniform", "params": { "min": 0.1,   "max": 0.4   }, "clampLo": 0.05,  "clampHi": 0.5   },
+    "reactionTimeMu":    { "distribution": "uniform", "params": { "min": 5.0,   "max": 6.2   }, "clampLo": 4.5,   "clampHi": 6.5   },
+    "reactionTimeSigma": { "distribution": "uniform", "params": { "min": 0.2,   "max": 0.7   }, "clampLo": 0.1,   "clampHi": 0.8   }
+  }
+}

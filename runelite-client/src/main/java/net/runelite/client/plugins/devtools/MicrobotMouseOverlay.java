@@ -1,7 +1,5 @@
 package net.runelite.client.plugins.devtools;
 
-import java.util.ArrayList;
-import java.util.LinkedList;
 import net.runelite.api.Client;
 import net.runelite.api.Point;
 import net.runelite.client.plugins.microbot.Microbot;
@@ -9,17 +7,25 @@ import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayLayer;
 import net.runelite.client.ui.overlay.OverlayPosition;
 
-import java.util.List;
 import javax.inject.Inject;
-import java.awt.*;
-import java.awt.geom.AffineTransform;
-import java.awt.geom.Path2D;
-import java.awt.image.BufferedImage;
+import java.awt.Dimension;
+import java.awt.Graphics2D;
+import java.util.ArrayList;
+import java.util.List;
 
+/**
+ * Renders the bot's emitted mouse path in the upstream overlay style: a glowing cyan marching-ants line
+ * through evenly-spaced nodes, fading toward the tail, with a pulsing reticle at the start of the
+ * stroke and a pulsing marker at the last click. Reads the shared emitted-point trail from {@link
+ * Microbot#getMouse()}, so it visualises whichever engine is active — including the MouseV2 spline.
+ */
 public class MicrobotMouseOverlay extends Overlay {
+    /** Spacing (px) between nodes along the resampled path. */
+    private static final double DOT_SPACING = 14.0;
+
     private final Client client;
     private final DevToolsPlugin plugin;
-    private float angle = 0.0f; // Rotation angle
+    private int frame;
 
     @Inject
     MicrobotMouseOverlay(Client client, DevToolsPlugin plugin) {
@@ -29,174 +35,114 @@ public class MicrobotMouseOverlay extends Overlay {
         setLayer(OverlayLayer.ABOVE_WIDGETS);
         setPriority(Overlay.PRIORITY_LOW);
         setNaughty();
-        // Increase the angle
-        new Thread(() -> {
-            try {
-                while (true) {
-                    angle += 0.004f; // Increment angle
-                    if (angle >= 2 * Math.PI) {
-                        angle -= (float) (2 * Math.PI);
-                    }
-
-                    Thread.sleep(10); // Control frame rate
-                }
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-        }).start();
     }
-
-
-
 
     @Override
     public Dimension render(Graphics2D g) {
-        if (plugin.getMouseMovement().isActive()) {
-            if (!Microbot.getMouse().getTimer().isRunning()) {
-                Microbot.getMouse().getPoints().clear();
-                Microbot.getMouse().getTimer().start();
-            }
-            g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            // Enable anti-aliasing for smooth rendering
-            int CROSSHAIR_SIZE = 30; // Cursor image size
-            int CORNER_SIZE = 10;
+        if (!plugin.getMouseMovement().isActive()) {
+            return null;
+        }
 
-            BufferedImage cursorImage = new BufferedImage(CROSSHAIR_SIZE, CROSSHAIR_SIZE, BufferedImage.TYPE_INT_ARGB);
-            Graphics2D g2d = cursorImage.createGraphics();
+        if (!Microbot.getMouse().getTimer().isRunning()) {
+            Microbot.getMouse().getTimer().start();
+        }
 
+        frame++;
+        MouseV2Paint.hints(g);
 
-            // Enable anti-aliasing for smooth rendering
-            g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        // Snapshot the trail to avoid concurrent modification while resampling.
+        Point[] trail = Microbot.getMouse().getPoints().toArray(new Point[0]);
+        List<double[]> nodes = resampleByArcLength(trail, DOT_SPACING);
 
-            // Rotate the graphics
-            g2d.setColor(Microbot.getMouse().getRainbowColor());
-            g2d.setStroke(new BasicStroke(2f));
+        // Glowing marching-ants line through the resampled nodes.
+        for (int i = 1; i < nodes.size(); i++) {
+            double[] a = nodes.get(i - 1);
+            double[] b = nodes.get(i);
+            MouseV2Paint.glowSegment(g, (int) Math.round(a[0]), (int) Math.round(a[1]),
+                    (int) Math.round(b[0]), (int) Math.round(b[1]), MouseV2Paint.PATH, frame);
+        }
+        // Node dots, fading toward the tail (oldest).
+        int n = nodes.size();
+        for (int i = 0; i < n; i++) {
+            double frac = n <= 1 ? 1.0 : i / (double) (n - 1);
+            int alpha = (int) (60 + 160 * frac);
+            double[] d = nodes.get(i);
+            MouseV2Paint.node(g, (int) Math.round(d[0]), (int) Math.round(d[1]), MouseV2Paint.PATH, alpha);
+        }
 
-            // Calculate the far edge (we subtract 1 because drawLine is inclusive)
-            int max = CROSSHAIR_SIZE - 1;
+        // Reticle at the oldest (tail) end of the stroke.
+        Point start = firstNonNull(trail);
+        if (start != null) {
+            MouseV2Paint.pulsingReticle(g, start.getX(), start.getY(), MouseV2Paint.PATH, frame);
+        }
 
-            // ========= TOP-LEFT CORNER (inverted) =========
-            //
-            // The corner's "joint" is at (CORNER_SIZE, CORNER_SIZE).
-            // Draw lines outward toward the top edge and left edge:
-            //
-            // Vertical line: from (CORNER_SIZE, 0) down to the joint
-            // Horizontal line: from (0, CORNER_SIZE) right to the joint
-            //
-            g2d.drawLine(CORNER_SIZE, 0, CORNER_SIZE, CORNER_SIZE);
-            g2d.drawLine(0, CORNER_SIZE, CORNER_SIZE, CORNER_SIZE);
-
-            // ========= TOP-RIGHT CORNER (inverted) =========
-            //
-            // The corner's "joint" is at (max - CORNER_SIZE, CORNER_SIZE).
-            // Draw lines outward toward the top edge and right edge:
-            //
-            // Vertical line: from (max - CORNER_SIZE, 0) down to the joint
-            // Horizontal line: from (max, CORNER_SIZE) left to the joint
-            //
-            g2d.drawLine(max - CORNER_SIZE, 0, max - CORNER_SIZE, CORNER_SIZE);
-            g2d.drawLine(max, CORNER_SIZE, max - CORNER_SIZE, CORNER_SIZE);
-
-            // ========= BOTTOM-LEFT CORNER (inverted) =========
-            //
-            // The corner's "joint" is at (CORNER_SIZE, max - CORNER_SIZE).
-            // Draw lines outward toward the bottom edge and left edge:
-            //
-            // Vertical line: from (CORNER_SIZE, max) up to the joint
-            // Horizontal line: from (0, max - CORNER_SIZE) right to the joint
-            //
-            g2d.drawLine(CORNER_SIZE, max, CORNER_SIZE, max - CORNER_SIZE);
-            g2d.drawLine(0, max - CORNER_SIZE, CORNER_SIZE, max - CORNER_SIZE);
-
-            // ========= BOTTOM-RIGHT CORNER (inverted) =========
-            //
-            // The corner's "joint" is at (max - CORNER_SIZE, max - CORNER_SIZE).
-            // Draw lines outward toward the bottom edge and right edge:
-            //
-            // Vertical line: from (max - CORNER_SIZE, max) up to the joint
-            // Horizontal line: from (max, max - CORNER_SIZE) left to the joint
-            //
-            g2d.drawLine(max - CORNER_SIZE, max, max - CORNER_SIZE, max - CORNER_SIZE);
-            g2d.drawLine(max, max - CORNER_SIZE, max - CORNER_SIZE, max - CORNER_SIZE);
-
-            // Draw 4x4 dot in the center
-            g2d.fillRect(CROSSHAIR_SIZE / 2 - 2, CROSSHAIR_SIZE / 2 - 2, 4, 4);
-
-
-            g2d.dispose();
-            // Mouse position
-            int x = Microbot.getMouse().getLastMove().getX();
-            int y = Microbot.getMouse().getLastMove().getY();
-
-
-            // Draw the crosshair centered
-            float drawX = x - CROSSHAIR_SIZE / 2.0f;
-            float drawY = y - CROSSHAIR_SIZE / 2.0f;
-
-            // Save the original graphics transform
-            AffineTransform original = g.getTransform();
-            // Rotate the cursor image
-            g.rotate(angle, drawX + CROSSHAIR_SIZE / 2.0, drawY + CROSSHAIR_SIZE / 2.0);
-
-            g.drawImage(cursorImage, (int) drawX, (int) drawY, null);
-            //OverlayUtil.renderTextLocation(g, new net.runelite.api.Point(drawX, drawY), "✛", Microbot.getMouse().getRainbowColor());
-
-            // Restore the original graphics transform
-            g.setTransform(original);
-
-
-            g.setStroke(new BasicStroke(3));
-            //g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            var points = Microbot.getMouse().getPoints();
-			// create a snapshot of the points to avoid concurrent modification
-			var pointArray = points.toArray(new Point[0]);
-			if (pointArray.length > 1)
-			{
-				Point firstPoint = pointArray[0];
-				Point lastPoint = pointArray[pointArray.length - 1];
-
-				if (firstPoint != null && lastPoint != null)
-				{
-					// Move to the first point
-					Path2D path = new Path2D.Double();
-					path.moveTo(firstPoint.getX(), firstPoint.getY());
-
-					// For each intermediate pair of points, use a midpoint-based quadTo
-					for (int i = 1; i < pointArray.length - 2; i++)
-					{
-						Point pCurrent = pointArray[i];
-						Point pNext = pointArray[i + 1];
-
-						// Calculate midpoints for a smoother curve
-						double midX = (pCurrent.getX() + pNext.getX()) / 2.0;
-						double midY = (pCurrent.getY() + pNext.getY()) / 2.0;
-
-						// Draw a quadratic curve from pCurrent toward midX/midY
-						path.quadTo(pCurrent.getX(), pCurrent.getY(), midX, midY);
-					}
-
-					// Finally, connect the last two points with a final quadTo
-					Point secondLast = pointArray[pointArray.length - 2];
-					path.quadTo(secondLast.getX(), secondLast.getY(), lastPoint.getX(), lastPoint.getY());
-
-					// Optionally set a thicker stroke with round caps/joins for a "brush" feel
-					g.setColor(Microbot.getMouse().getRainbowColor());
-					g.setStroke(new BasicStroke(
-						3.0f,
-						BasicStroke.CAP_ROUND,
-						BasicStroke.JOIN_ROUND
-					));
-
-					// Draw the smooth path
-					g.draw(path);
-				}
-			}
-
-        } else {
-            Microbot.getMouse().getPoints().clear();
-            Microbot.getMouse().getTimer().stop();
+        // Last click target.
+        Point lastClick = Microbot.getMouse().getLastClick();
+        if (lastClick != null && lastClick.getX() >= 0 && lastClick.getY() >= 0) {
+            MouseV2Paint.pulsingRing(g, lastClick.getX(), lastClick.getY(), MouseV2Paint.TARGET, frame);
         }
 
         return null;
+    }
+
+    private static Point firstNonNull(Point[] pts) {
+        for (Point p : pts) {
+            if (p != null) {
+                return p;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Resamples the polyline through {@code pts} into points spaced evenly by {@code spacing} along
+     * the arc length, so the nodes are uniform regardless of the (power-law) timing density of the
+     * underlying emitted points.
+     */
+    private static List<double[]> resampleByArcLength(Point[] pts, double spacing) {
+        List<double[]> out = new ArrayList<>();
+
+        List<Point> p = new ArrayList<>(pts.length);
+        for (Point q : pts) {
+            if (q != null) {
+                p.add(q);
+            }
+        }
+        if (p.isEmpty()) {
+            return out;
+        }
+
+        double prevX = p.get(0).getX();
+        double prevY = p.get(0).getY();
+        out.add(new double[]{prevX, prevY});
+
+        double acc = 0.0; // distance accumulated since the last placed node
+        for (int i = 1; i < p.size(); i++) {
+            double cx = p.get(i).getX();
+            double cy = p.get(i).getY();
+            double segLen = Math.hypot(cx - prevX, cy - prevY);
+            if (segLen < 1e-6) {
+                continue;
+            }
+
+            double sx = prevX;
+            double sy = prevY;
+            double remain = segLen;
+            while (acc + remain >= spacing) {
+                double need = spacing - acc;
+                double f = need / remain;
+                double nx = sx + (cx - sx) * f;
+                double ny = sy + (cy - sy) * f;
+                out.add(new double[]{nx, ny});
+                sx = nx;
+                sy = ny;
+                remain -= need;
+                acc = 0.0;
+            }
+            acc += remain;
+            prevX = cx;
+            prevY = cy;
+        }
+        return out;
     }
 }

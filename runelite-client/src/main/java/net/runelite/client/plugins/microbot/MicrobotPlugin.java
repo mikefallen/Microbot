@@ -117,6 +117,8 @@ public class MicrobotPlugin extends Plugin
 	@Inject
 	private PouchOverlay pouchOverlay;
 	@Inject
+	private net.runelite.client.plugins.microbot.util.mouse.mousev2.MouseV2DebugOverlay mouseV2DebugOverlay;
+	@Inject
 	private EventBus eventBus;
 	private GameChatAppender gameChatAppender;
 
@@ -165,6 +167,7 @@ public class MicrobotPlugin extends Plugin
 		Microbot.pauseAllScripts.set(false);
 		Microbot.enableAutoRunOn = microbotConfig.enableAutoRunOn();
 		Microbot.useStaminaPotsIfNeeded = microbotConfig.useStaminaPotsIfNeeded();
+		net.runelite.client.plugins.microbot.util.antiban.Rs2AntibanSettings.useMouseV2 = microbotConfig.enableMouseV2();
 		Microbot.getBlockingEventManager().start();
 
 		MicrobotPluginListPanel pluginListPanel = pluginListPanelProvider.get();
@@ -199,6 +202,7 @@ public class MicrobotPlugin extends Plugin
 			overlayManager.add(microbotOverlay);
 			overlayManager.add(gembagOverlay);
 			overlayManager.add(pouchOverlay);
+			overlayManager.add(mouseV2DebugOverlay);
 		}
 
 	}
@@ -208,6 +212,7 @@ public class MicrobotPlugin extends Plugin
 		overlayManager.remove(microbotOverlay);
 		overlayManager.remove(gembagOverlay);
 		overlayManager.remove(pouchOverlay);
+		overlayManager.remove(mouseV2DebugOverlay);
 		clientToolbar.removeNavigation(navButton);
 		if (gameChatAppender.isStarted()) gameChatAppender.stop();
 		microbotVersionChecker.shutdown();
@@ -481,6 +486,9 @@ public class MicrobotPlugin extends Plugin
 					break;
 				case MicrobotConfig.keyUseStaminaPotsIfNeeded:
 					Microbot.useStaminaPotsIfNeeded = microbotConfig.useStaminaPotsIfNeeded();
+					break;
+				case MicrobotConfig.keyEnableMouseV2:
+					net.runelite.client.plugins.microbot.util.antiban.Rs2AntibanSettings.useMouseV2 = microbotConfig.enableMouseV2();
 					break;
 				case MicrobotConfig.keyEnableGameChatLogging:
 				case MicrobotConfig.keyGameChatLogPattern:

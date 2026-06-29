@@ -4,6 +4,7 @@ import ch.qos.logback.classic.Level;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import net.runelite.client.config.Config;
+import net.runelite.client.config.ConfigButton;
 import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
 import net.runelite.client.config.ConfigSection;
@@ -217,6 +218,31 @@ public interface MicrobotConfig extends Config
 	default boolean showCacheInfo() {
 		return false;
 	}
+
+	String keyEnableMouseV2 = "enableMouseV2";
+	@ConfigItem(
+		keyName = keyEnableMouseV2,
+		name = "Enable Mouse V2",
+		description = "Use the Mouse V2 movement engine (spline trajectories, two-thirds power-law timing, " +
+				"seeded mouse personality and predictive clicking). Disable to fall back to the legacy natural mouse.",
+		position = 3,
+		section = generalSection
+	)
+	default boolean enableMouseV2()
+	{
+		return true;
+	}
+
+	String keyOpenMouseProfileTuner = "openMouseProfileTuner";
+	@ConfigItem(
+		keyName = keyOpenMouseProfileTuner,
+		name = "Tune mouse profile…",
+		description = "Open the optional mouse-profile recorder to calibrate Mouse V2 from your own "
+				+ "hand movements. Not required for Mouse V2 to work.",
+		position = 4,
+		section = generalSection
+	)
+	default ConfigButton openMouseProfileTuner() { return new ConfigButton(); }
 
 	String keyDisableTelemetry = "disableTelemetry";
 	@ConfigItem(

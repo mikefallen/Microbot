@@ -112,6 +112,9 @@ public class Microbot {
     @Inject
     public static NaturalMouse naturalMouse;
     @Getter
+    @Inject
+    public static net.runelite.client.plugins.microbot.util.mouse.mousev2.MouseV2Engine mouseV2;
+    @Getter
     private static Mouse mouse = new VirtualMouse();
     @Getter
     @Inject

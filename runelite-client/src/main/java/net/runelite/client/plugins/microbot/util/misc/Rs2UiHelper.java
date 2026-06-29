@@ -9,6 +9,7 @@ import net.runelite.client.plugins.microbot.Microbot;
 import net.runelite.client.plugins.microbot.util.antiban.Rs2AntibanSettings;
 import net.runelite.client.plugins.microbot.util.math.Rs2Random;
 import net.runelite.client.plugins.microbot.util.menu.NewMenuEntry;
+import net.runelite.client.plugins.microbot.util.mouse.mousev2.ShapeAimPicker;
 import net.runelite.client.plugins.microbot.util.text.Rs2TextSanitizer;
 
 import java.awt.*;
@@ -108,6 +109,61 @@ public class Rs2UiHelper {
         return new Rectangle(clickbox.getBounds());
     }
     
+    /**
+     * Returns the actor's clickbox as a {@link Shape} (not flattened to bounds), or {@code null} on
+     * failure. Callers fall back to {@link #getActorClickbox(Actor)} when null is returned.
+     */
+    public static Shape getActorHull(Actor actor) {
+        if (actor == null) {
+            return null;
+        }
+        LocalPoint lp = actor.getLocalLocation();
+        if (lp == null) {
+            return null;
+        }
+        return Microbot.getClientThread().runOnClientThreadOptional(() ->
+                Perspective.getClickbox(Microbot.getClient(),
+                        Microbot.getClient().getTopLevelWorldView(),
+                        actor.getModel(), actor.getCurrentOrientation(),
+                        lp.getX(), lp.getY(),
+                        Perspective.getTileHeight(Microbot.getClient(), lp,
+                                actor.getWorldLocation().getPlane())))
+                .orElse(null);
+    }
+
+    /**
+     * Returns the tile object's clickbox as a {@link Shape}, or {@code null} on failure.
+     * Callers fall back to {@link #getObjectClickbox(TileObject)} when null is returned.
+     */
+    public static Shape getObjectHullShape(TileObject object) {
+        if (object == null) {
+            return null;
+        }
+        return Microbot.getClientThread().runOnClientThreadOptional(object::getClickbox).orElse(null);
+    }
+
+    /**
+     * Returns a canvas-projected, shrunk tile polygon for click-point picking, or {@code null} on
+     * failure. The polygon is shrunk by {@link ShapeAimPicker#TILE_SHRINK} so aim points stay safely
+     * inside the tile boundary.
+     */
+    public static Polygon getTileShapePoly(Tile tile) {
+        if (tile == null) {
+            return null;
+        }
+        Polygon raw = Microbot.getClientThread().runOnClientThreadOptional(() -> {
+            Client client = Microbot.getClient();
+            if (client == null) {
+                return null;
+            }
+            return Perspective.getCanvasTilePoly(client, tile.getLocalLocation());
+        }).orElse(null);
+        if (raw == null) {
+            return null;
+        }
+        return ShapeAimPicker.shrink(raw, ShapeAimPicker.TILE_SHRINK);
+    }
+
     public static Rectangle getTileClickbox(Tile tile) {
         if (tile == null) return getDefaultRectangle();
 
